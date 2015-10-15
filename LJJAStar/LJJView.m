@@ -25,8 +25,6 @@
         LJJAStarPathfinding *aStar = [[LJJAStarPathfinding alloc] init];
         _mapArray = [aStar getMapArray];
         _wayList = [aStar getWayList];
-        NSLog(@"maparray = %@",_mapArray);
-        NSLog(@"_wayList = %@",_wayList);
         _num = _wayList.count;
         [self setupMap];
         [self goAnimation];
