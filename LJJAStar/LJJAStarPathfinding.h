@@ -7,11 +7,6 @@
 //
 
 #import <Foundation/Foundation.h>
-extern const NSInteger kMapWidth ;
-extern const NSInteger kMapHeight ;
-extern const NSInteger kCell ;
-extern const NSInteger kMapColumn ;
-extern const NSInteger kMapRow;
 NS_ENUM(NSInteger){
     LJJTypeSpace = 0,
     LJJTypeStart = 1,
@@ -20,6 +15,15 @@ NS_ENUM(NSInteger){
     LJJTypeWay = 8
 };
 @interface LJJAStarPathfinding : NSObject
+@property (assign,nonatomic,readonly) NSInteger mapWidth;
+@property (assign,nonatomic,readonly) NSInteger mapHeight;
+@property (assign,nonatomic,readonly) NSInteger mapCell;
+@property (assign,nonatomic,readonly) NSInteger mapColumn;
+@property (assign,nonatomic,readonly) NSInteger mapRow;
+/**
+ *  地图data
+ */
+- (instancetype)initWithMapData:(NSData *)mapData;
 - (NSArray *)getMapArray;
 - (NSArray *)getWayList;
 @end

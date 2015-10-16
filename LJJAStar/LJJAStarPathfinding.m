@@ -7,60 +7,52 @@
 //
 #import "LJJAStarPathfinding.h"
 #import "LJJNode.h"
-const NSInteger kMapWidth = 300;
-const NSInteger kMapHeight = 300;
-const NSInteger kCell = 10;
-const NSInteger kMapColumn = kMapWidth/kCell;
-const NSInteger kMapRow = kMapHeight/kCell;
+
 @interface LJJAStarPathfinding ()
 {
     NSMutableArray *_openList,*_closedList,*_wayList,*_mapArray;
-    //    NSInteger mapArray[kMapRow][kMapColumn];
-    
     NSDictionary *startD,*endD;
 }
 @end
 
 @implementation LJJAStarPathfinding
-- (instancetype)init {
+- (instancetype)initWithMapData:(NSData *)mapData {
     if (self = [super init]) {
-        [self configMapData];
+        [self configMapData:mapData];
         [self calculateAStar];
     }
     return self;
 }
-- (void)configMapData {
+- (void)configMapData:(NSData *)mapData {
+    NSDictionary *dicts = [NSJSONSerialization JSONObjectWithData:mapData options:NSJSONReadingAllowFragments error:nil];
+    _mapWidth = [dicts[@"mapWidth"] integerValue];
+    _mapHeight = [dicts[@"mapHeight"] integerValue];
+    _mapCell = [dicts[@"mapCell"] integerValue];
+    _mapColumn = _mapWidth/_mapCell;
+    _mapRow = _mapHeight/_mapCell;
     _mapArray = [NSMutableArray array];
     //space
-    for (NSInteger i = 0; i<kMapRow; i++) {
+    for (NSInteger i = 0; i<_mapRow; i++) {
         NSMutableArray *xArray = [NSMutableArray array];
-        for (NSInteger j = 0; j<kMapColumn; j++) {
-            //            mapArray[i][j] = LJJTypeSpace;
+        for (NSInteger j = 0; j<_mapColumn; j++) {
             [xArray addObject:@(LJJTypeSpace)];
         }
         [_mapArray addObject:xArray];
     }
     
-    NSString *path = [[NSBundle mainBundle] pathForResource:@"mapData.geojson" ofType:nil];
-    NSData *data = [NSData dataWithContentsOfFile:path];
-    
-    NSDictionary *dicts = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingAllowFragments error:nil];
     //start
     NSDictionary *startDict = dicts[@"start"];
-    //    mapArray[[startDict[@"y"] integerValue]][[startDict[@"x"] integerValue]] = LJJTypeStart;
     NSMutableArray *xSArray = _mapArray[[startDict[@"y"] integerValue]];
     [xSArray replaceObjectAtIndex:[startDict[@"x"] integerValue] withObject:@(LJJTypeStart)];
     startD = startDict;
     //end
     NSDictionary *endDict = dicts[@"end"];
-    //    mapArray[[endDict[@"y"] integerValue]][[endDict[@"x"] integerValue]] = LJJTypeEnd;
     NSMutableArray *xEArray = _mapArray[[endDict[@"y"] integerValue]];
     [xEArray replaceObjectAtIndex:[endDict[@"x"] integerValue] withObject:@(LJJTypeEnd)];
     endD = endDict;
     //obstacle
     NSArray *obstacleArray = dicts[@"obstacle"];
     for (NSDictionary *dict in obstacleArray) {
-        //        mapArray[[dict[@"y"] integerValue]][[dict[@"x"] integerValue]] = LJJTypeObstacle;
         NSMutableArray *xOArray = _mapArray[[dict[@"y"] integerValue]];
         [xOArray replaceObjectAtIndex:[dict[@"x"] integerValue] withObject:@(LJJTypeObstacle)];
     }
@@ -110,6 +102,7 @@ const NSInteger kMapRow = kMapHeight/kCell;
             if (![_openList containsObject:currentNode]) {
                 [_openList addObject:currentNode];
             }else {
+                //替换openList的最小路径
                 if (fN<lowestWayNode.f) {
                     lowestWayNode.previousNode = currentNode;
                 }
@@ -130,9 +123,11 @@ const NSInteger kMapRow = kMapHeight/kCell;
     [_wayList insertObject:@{@"x":@(lastClosedListNode.x),@"y":@(lastClosedListNode.y)} atIndex:0];
     
 }
+//估计函数的选区
 - (NSInteger)getFnGnHnfristNode:(LJJNode *)fristNode secendNode:(LJJNode *)secendNode {
     return pow((fristNode.x-secendNode.x), 2)+pow((fristNode.y-secendNode.y), 2);
 }
+//获取openList中最小f值的节点
 - (LJJNode *)getOpenListWithLowestWay {
     LJJNode *minNode = _openList[0];
     for (LJJNode *node in _openList) {
@@ -142,19 +137,20 @@ const NSInteger kMapRow = kMapHeight/kCell;
     }
     return minNode;
 }
-- (LJJNode *)getOpenListEqualNode:(LJJNode *)node {
-    return _openList[[_openList indexOfObject:node]];
-}
+//获取满足条件的节点
 - (NSArray *)getDirectionArrayWithNode:(LJJNode *)node {
     NSMutableArray * directionArray = [NSMutableArray arrayWithCapacity:4];
     for (NSInteger i = -1; i < 2; i ++) {
         for (NSInteger j = -1; j < 2; j ++) {
-            if ((i*j!= 0)||(i==0&&j==0)) {
+            if(i*j!= 0) {//如果去掉这个条件，就变成对八个方向判断
+                continue;
+            }
+            if (i==0&&j==0) {
                 continue;
             }
             NSInteger x = node.x + i;
             NSInteger y = node.y + j;
-            if (x < 0||y < 0||x > (kMapColumn-1)||y > (kMapRow-1)) {
+            if (x < 0||y < 0||x > (_mapColumn-1)||y > (_mapRow-1)) {
                 continue;
             }
             if ([_mapArray[y][x] integerValue] == LJJTypeObstacle) {

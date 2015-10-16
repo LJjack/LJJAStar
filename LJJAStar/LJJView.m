@@ -14,7 +14,7 @@
 {
     CGMutablePathRef _mPath;
     NSArray *_mapArray,*_wayList;
-    NSInteger _num;
+    NSInteger _num,_mapWidth,_mapHeight,_mapCell,_mapColumn,_mapRow;
     
 }
 @end
@@ -22,12 +22,27 @@
 - (instancetype)initWithFrame:(CGRect)frame {
     if (self = [super initWithFrame:frame]) {
         [self setBackgroundColor:[UIColor whiteColor]];
-        LJJAStarPathfinding *aStar = [[LJJAStarPathfinding alloc] init];
-        _mapArray = [aStar getMapArray];
-        _wayList = [aStar getWayList];
-        _num = _wayList.count;
-        [self setupMap];
-        [self goAnimation];
+        __weak typeof(LJJView) *weakSelf = self;
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            NSString *path = [[NSBundle mainBundle] pathForResource:@"mapData.geojson" ofType:nil];
+            NSData *mapData = [NSData dataWithContentsOfFile:path];
+            
+            LJJAStarPathfinding *aStar = [[LJJAStarPathfinding alloc] initWithMapData:mapData];
+            _mapArray = [aStar getMapArray];
+            _wayList = [aStar getWayList];
+            _num = _wayList.count;
+            _mapWidth = aStar.mapWidth;
+            _mapHeight = aStar.mapHeight;
+            _mapCell = aStar.mapCell;
+            _mapColumn = aStar.mapColumn;
+            _mapRow = aStar.mapRow;
+            [weakSelf setupMap];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [weakSelf goAnimation];
+            });
+        });
+        
+        
     }
     return self;
 }
@@ -36,14 +51,14 @@
     _mPath = CGPathCreateMutable();
     
     //竖线
-    for (NSInteger i = 0; i <= kMapColumn; i ++) {
-        CGPathMoveToPoint(_mPath, NULL, i*kCell, 0);
-        CGPathAddLineToPoint(_mPath, NULL, i*kCell, kMapHeight);
+    for (NSInteger i = 0; i <= _mapColumn; i ++) {
+        CGPathMoveToPoint(_mPath, NULL, i*_mapCell, 0);
+        CGPathAddLineToPoint(_mPath, NULL, i*_mapCell, _mapHeight);
     }
     // 横线
-    for (NSInteger i = 0; i <= kMapRow; i ++) {
-        CGPathMoveToPoint(_mPath, NULL, 0, i*kCell);
-        CGPathAddLineToPoint(_mPath, NULL, kMapWidth, i*kCell);
+    for (NSInteger i = 0; i <= _mapRow; i ++) {
+        CGPathMoveToPoint(_mPath, NULL, 0, i*_mapCell);
+        CGPathAddLineToPoint(_mPath, NULL, _mapWidth, i*_mapCell);
     }
 }
 
@@ -57,30 +72,30 @@
     CGContextStrokePath(context);
     [self drawMapContext:context];
     [[UIColor cyanColor] set];
-    CGContextFillRect(context, CGRectMake([_wayList[_num][@"x"] integerValue]*kCell+1, [_wayList[_num][@"y"] integerValue]*kCell+1, kCell-2, kCell-2));
+    CGContextFillRect(context, CGRectMake([_wayList[_num][@"x"] integerValue]*_mapCell+1, [_wayList[_num][@"y"] integerValue]*_mapCell+1, _mapCell-2, _mapCell-2));
 
 }
 - (void)drawMapContext:(CGContextRef)context {
-    for (NSInteger y = 0; y<kMapRow; y++) {
-        for (NSInteger x = 0; x<kMapColumn; x++) {
+    for (NSInteger y = 0; y<_mapRow; y++) {
+        for (NSInteger x = 0; x<_mapColumn; x++) {
             switch ([_mapArray[y][x] integerValue]) {
                 case LJJTypeSpace:
                     break;
                 case LJJTypeStart:
                     [[UIColor greenColor] set];
-                    CGContextFillRect(context, CGRectMake(x*kCell+1, y*kCell+1, kCell-2, kCell-2));
+                    CGContextFillRect(context, CGRectMake(x*_mapCell+1, y*_mapCell+1, _mapCell-2, _mapCell-2));
                     break;
                 case LJJTypeEnd:
                     [[UIColor redColor] set];
-                    CGContextFillRect(context, CGRectMake(x*kCell+1, y*kCell+1, kCell-2, kCell-2));
+                    CGContextFillRect(context, CGRectMake(x*_mapCell+1, y*_mapCell+1, _mapCell-2, _mapCell-2));
                     break;
                 case LJJTypeObstacle:
                     [[UIColor blueColor] set];
-                    CGContextFillRect(context, CGRectMake(x*kCell+1, y*kCell+1, kCell-2, kCell-2));
+                    CGContextFillRect(context, CGRectMake(x*_mapCell+1, y*_mapCell+1, _mapCell-2, _mapCell-2));
                     break;
                 case LJJTypeWay:
                     [[UIColor yellowColor] set];
-                    CGContextFillRect(context, CGRectMake(x*kCell+1, y*kCell+1, kCell-2, kCell-2));
+                    CGContextFillRect(context, CGRectMake(x*_mapCell+1, y*_mapCell+1, _mapCell-2, _mapCell-2));
                     break;
                 default:
                     break;
